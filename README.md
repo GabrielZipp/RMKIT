@@ -29,10 +29,6 @@ O que antes levava minutos por documento, feito manualmente, passou a levar segu
 - **python-docx** — leitura e edição de arquivos Word
 - **docx2pdf** — conversão para PDF
 
-## 📸 Demonstração
-
-*(adicionar aqui um print da interface gráfica em ação)*
-
 ## ▶️ Como rodar
 
 ```bash
