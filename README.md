@@ -29,16 +29,6 @@ O que antes levava minutos por documento, feito manualmente, passou a levar segu
 - **python-docx** — leitura e edição de arquivos Word
 - **docx2pdf** — conversão para PDF
 
-## ▶️ Como rodar
-
-```bash
-git clone https://github.com/GabrielZipp/RMKit.git
-cd RMKit
-pip install -r requirements.txt
-python interface.py
-```
-
-> Os templates `.docx` de exemplo neste repositório usam dados fictícios apenas para fins de demonstração.
 
 ## 📌 Contexto
 
