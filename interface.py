@@ -1,6 +1,10 @@
 # ============================================
 # RMKIT - INTERFACE GRÁFICA (interface.py)
+<<<<<<< HEAD
 # VERSÃO FINAL COM MELHORIAS
+=======
+# VERSÃO FINAL COM MELHORIAS + FIX DO BOTÃO ABRIR PDF
+>>>>>>> 5b56f14 (correção de bug na abertura de pdf)
 # ============================================
 
 import customtkinter as ctk
@@ -159,7 +163,11 @@ def criar_campo_incremento(label, incrementadores):
 entries["nome"] = campo_com_label("Nome Completo")
 entries["nacionalidade"] = campo_com_label("Nacionalidade", "brasileiro(a)")
 
+<<<<<<< HEAD
 # Estado civil: agora é combo
+=======
+# Estado civil: combo
+>>>>>>> 5b56f14 (correção de bug na abertura de pdf)
 entries["estado_civil"] = campo_combo(
     "Estado Civil",
     ["solteiro(a)", "casado(a)", "viúvo(a)", "divorciado(a)"]
@@ -225,7 +233,11 @@ entries["cidade"] = campo_com_label("Cidade")
 entries["estado"] = campo_com_label("Estado (UF)")
 
 
+<<<<<<< HEAD
 # ---------- Presets por tipo de ação ----------
+=======
+# ---------- Formatadores de valor ----------
+>>>>>>> 5b56f14 (correção de bug na abertura de pdf)
 
 def _fmt_salario(n):
     plural = "s" if n != 1 else ""
@@ -245,6 +257,11 @@ def _fmt_percentual(n):
     return f"{n}% ({numero_por_extenso(n)} por cento)"
 
 
+<<<<<<< HEAD
+=======
+# ---------- Presets por tipo de ação ----------
+
+>>>>>>> 5b56f14 (correção de bug na abertura de pdf)
 def aplicar_preset(tipo):
     """Preenche automaticamente honorários conforme tipo de ação."""
     t = tipo.lower()
@@ -380,13 +397,29 @@ ultimo_pdf = {"path": None}
 
 
 def abrir_pdf():
+<<<<<<< HEAD
     if ultimo_pdf["path"] and os.path.exists(ultimo_pdf["path"]):
         try:
             os.startfile(ultimo_pdf["path"])
         except Exception as e:
             status.configure(text=f"❌ Erro ao abrir: {e}")
     else:
+=======
+    caminho = ultimo_pdf.get("path")
+    if not caminho:
+>>>>>>> 5b56f14 (correção de bug na abertura de pdf)
         status.configure(text="❌ Nenhum PDF disponível")
+        return
+    if not os.path.exists(caminho):
+        status.configure(text="❌ Arquivo não encontrado (foi movido ou apagado?)")
+        return
+    try:
+        os.startfile(caminho)
+        status.configure(text=f"📂 Abrindo: {os.path.basename(caminho)}")
+    except Exception as e:
+        status.configure(text=f"❌ Erro ao abrir: {e}")
+        messagebox.showerror("Erro ao abrir PDF",
+                             f"Não foi possível abrir:\n{caminho}\n\n{e}")
 
 
 # ---------- Coleta e geração ----------
@@ -415,18 +448,51 @@ def coletar_dados():
     }
 
 
+<<<<<<< HEAD
 def _reset_ui():
     progress.pack_forget()
     gerar_btn.configure(state="normal")
     abrir_btn.configure(state="disabled", fg_color="#2b5e2b")
 
 
+=======
+# ---------- Reset helpers (o fix do bug está aqui) ----------
+
+def _reset_progresso():
+    """Só limpa a barra e reabilita o botão Gerar (usar no sucesso)."""
+    progress.stop()
+    progress.pack_forget()
+    gerar_btn.configure(state="normal")
+
+
+def _reset_completo():
+    """Limpa tudo e desabilita o Abrir PDF (usar em erro)."""
+    _reset_progresso()
+    abrir_btn.configure(state="disabled", fg_color="#2b5e2b")
+
+
+def _on_sucesso(arquivo):
+    """Callback na thread principal após geração bem-sucedida."""
+    ultimo_pdf["path"] = arquivo
+    status.configure(text=f"✅ PDF salvo: {os.path.basename(arquivo)}")
+    abrir_btn.configure(state="normal", fg_color="#2e7d32", hover_color="#1e5622")
+    _reset_progresso()
+
+
+def _on_erro(msg):
+    """Callback na thread principal em caso de erro."""
+    status.configure(text=f"❌ Erro: {msg}")
+    _reset_completo()
+
+
+>>>>>>> 5b56f14 (correção de bug na abertura de pdf)
 def gerar_kit_thread(arquivo, dados):
     try:
         template_proc = resource_path("procuração.docx")
         template_cont = resource_path("contrato.docx")
 
         if not os.path.exists(template_proc) or not os.path.exists(template_cont):
+<<<<<<< HEAD
             app.after(0, lambda: status.configure(text="❌ Templates não encontrados!"))
             app.after(0, _reset_ui)
             return
@@ -443,6 +509,16 @@ def gerar_kit_thread(arquivo, dados):
         msg = str(e)[:120]
         app.after(0, lambda: status.configure(text=f"❌ Erro: {msg}"))
         app.after(0, _reset_ui)
+=======
+            app.after(0, lambda: _on_erro("Templates não encontrados!"))
+            return
+
+        gerador.gerar_kit(template_proc, template_cont, dados, arquivo)
+        app.after(0, lambda: _on_sucesso(arquivo))
+    except Exception as e:
+        msg = str(e)[:120]
+        app.after(0, lambda m=msg: _on_erro(m))
+>>>>>>> 5b56f14 (correção de bug na abertura de pdf)
 
 
 def iniciar_geracao():

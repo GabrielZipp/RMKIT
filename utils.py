@@ -1,5 +1,6 @@
 # ============================================
 # RMKIT - UTILIDADES (utils.py)
+# VERSÃO FINAL
 # ============================================
 
 import os
@@ -13,7 +14,11 @@ def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
     except Exception:
+<<<<<<< HEAD
         # Corrigido: usa o diretório do script, não o CWD
+=======
+        # Usa o diretório do script, não o CWD
+>>>>>>> 5b56f14 (correção de bug na abertura de pdf)
         base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
 
