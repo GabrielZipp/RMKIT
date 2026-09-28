@@ -74,42 +74,86 @@ class GeradorKit:
     # ---------- Substituição de placeholders (PRESERVA FORMATAÇÃO) ----------
 
     def substituir_no_paragrafo(self, paragrafo, substituicoes):
-        """Substitui placeholders preservando formatação; lida com
-        placeholders divididos entre múltiplos runs do Word."""
+        """Substitui placeholders preservando a formatação de cada run.
+
+        Aplica em loop porque uma substituição pode expor outro placeholder
+        (ex.: se um valor contiver outro placeholder)."""
         if not paragrafo.runs:
-            # Fallback raro: parágrafo sem runs
-            if paragrafo.text:
-                novo = paragrafo.text
-                for ph, val in substituicoes.items():
-                    novo = novo.replace(ph, str(val))
-                if novo != paragrafo.text:
-                    paragrafo.text = novo
             return
+        for _ in range(10):
+            if not self._aplicar_substituicoes(paragrafo, substituicoes):
+                break
 
-        runs = paragrafo.runs
+    def _aplicar_substituicoes(self, paragrafo, substituicoes):
+        """Uma passada. Retorna True se algo foi alterado."""
+        runs = list(paragrafo.runs)
+        if not runs:
+            return False
 
-        # Fase 1: substituir em runs onde o placeholder está inteiro
-        for run in runs:
-            novo = run.text
-            for ph, val in substituicoes.items():
-                if ph in novo:
-                    novo = novo.replace(ph, str(val))
-            if novo != run.text:
-                run.text = novo
+        textos = [r.text for r in runs]
+        alterou = False
 
-        # Fase 2: verificar se ainda restou algum placeholder (dividido entre runs)
-        texto_completo = "".join(r.text for r in runs)
-        restantes = [ph for ph in substituicoes if ph in texto_completo]
-        if not restantes:
-            return
+        for placeholder, valor in substituicoes.items():
+            valor = "" if valor is None else str(valor)
 
-        # Fase 3: merge — concentra o texto final no primeiro run
-        texto_final = texto_completo
-        for ph in restantes:
-            texto_final = texto_final.replace(ph, str(substituicoes[ph]))
-        runs[0].text = texto_final
-        for r in runs[1:]:
-            r.text = ""
+            while True:
+                texto_completo = "".join(textos)
+                idx = texto_completo.find(placeholder)
+                if idx == -1:
+                    break
+
+                fim = idx + len(placeholder)
+
+                # Localiza qual run contém o início e qual contém o fim
+                acc = 0
+                inicio_run = fim_run = None
+                for i, t in enumerate(textos):
+                    if inicio_run is None and acc + len(t) > idx:
+                        inicio_run = i
+                    if acc + len(t) >= fim:
+                        fim_run = i
+                        break
+                    acc += len(t)
+
+                if inicio_run is None or fim_run is None:
+                    break  # segurança
+
+                # Offset do início do placeholder dentro do run inicial
+                acc_ini = sum(len(textos[i]) for i in range(inicio_run))
+                offset_ini = idx - acc_ini
+
+                # Offset do fim do placeholder dentro do run final
+                acc_fim = sum(len(textos[i]) for i in range(fim_run))
+                offset_fim = fim - acc_fim
+
+                if inicio_run == fim_run:
+                    # Placeholder inteiro em um único run — não perde formatação
+                    textos[inicio_run] = (
+                        textos[inicio_run][:offset_ini]
+                        + valor
+                        + textos[inicio_run][offset_fim:]
+                    )
+                else:
+                    # Placeholder dividido entre runs:
+                    # - o valor entra no run inicial, herdando a formatação dele
+                    # - runs intermediários são esvaziados (mas preservam formatação)
+                    # - o run final mantém só o que vem DEPOIS do placeholder
+                    prefixo = textos[inicio_run][:offset_ini]
+                    sufixo = textos[fim_run][offset_fim:]
+
+                    textos[inicio_run] = prefixo + valor
+                    for i in range(inicio_run + 1, fim_run):
+                        textos[i] = ""
+                    textos[fim_run] = sufixo
+
+                alterou = True
+
+        if alterou:
+            for i, r in enumerate(runs):
+                if r.text != textos[i]:
+                    r.text = textos[i]
+
+        return alterou
 
     def substituir_no_tabela(self, tabela, substituicoes):
         for linha in tabela.rows:
@@ -199,7 +243,6 @@ class GeradorKit:
 
             if thread.is_alive():
                 logger.error("Timeout na conversão; tentando liberar Word.")
-                # Tentar fechar doc/Word
                 for obj in ("doc", "word"):
                     try:
                         if holder[obj] is not None:
@@ -210,7 +253,6 @@ class GeradorKit:
                             holder[obj] = None
                     except Exception:
                         pass
-                # Matar Word se ainda estiver preso
                 self._matar_word_orfao()
                 raise Exception(
                     f"Tempo limite excedido ({timeout}s). Verifique se o Word não está "
@@ -222,7 +264,6 @@ class GeradorKit:
                 raise Exception("Falha na conversão para PDF")
             return output_pdf
         finally:
-            # Só apaga o temp_dir se o Word já tiver soltado o arquivo
             try:
                 shutil.rmtree(temp_dir, ignore_errors=True)
             except Exception:
